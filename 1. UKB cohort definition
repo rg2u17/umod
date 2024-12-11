@@ -1,0 +1,460 @@
+###########################
+## 1. Load libraries ######
+
+library(tidyverse)
+library(DataExplorer)
+
+############################
+## 2. Define HTN codes #####
+
+# GP read codes
+pmhx_htn_list_readv2_3 <- c(  
+  "G2...",	#Hypertensive disease
+  "G20..",	#High blood pressure (& [essential hypertension])
+  "G200.",	#Malignant essential hypertension
+  "G201.",	#Benign essential hypertension
+  "G202.",	#Systolic hypertension
+  "G203.",	#See XSDSb
+  "G20z.",	#Hypertension NOS (& [essential])
+  "G22z.",	#(Renal hypertension) or (hypertensive renal disease NOS)
+  "Gyu2.",	#[X]Hypertensive diseases
+  "Gyu20",	#[X]Other secondary hypertension
+  "Gyu21",	#[X]Hypertension secondary to other renal disorders
+  "XE0Ub",	#Hypertension
+  "XE0Uc",	#Essential hypertension
+  "XE0Ud",	#Essential hypertension NOS
+  "XE0Ue",	#Hypertensive heart disease NOS without congestive cardiac failure
+  "XE0Uf",	#Hypertensive renal disease
+  "XE0Ug",	#Hypertensive renal disease NOS
+  "XSDSb",	#Diastolic hypertension
+  "Xa3fQ",	#Malignant hypertension
+  "Xa8HD",	#On treatment for hypertension
+  "XaIy8",	#Moderate hypertension control
+  "XaIyC",	#Hypertension treatment refused
+  "XaIyD",	#Hypertension six month review
+  "XaIyE",	#Hypertension annual review
+  "XaZWm",	#Stage 1 hypertension (NICE - National Institute for Health and Clinical Excellence 2011)
+  "XaZWn",	#Severe hypertension (NICE - National Institute for Health and Clinical Excellence 2011)
+  "XaZbz",	#Stage 2 hypertension (NICE - National Institute for Health and Clinical Excellence 2011)
+  "Xab9L",	#Stage 1 hypertension (NICE 2011) without evidence of end organ damage
+  "Xab9M",	#Stage 1 hypertension (NICE 2011) with evidence of end organ damage
+  "6627.",	#Good hypertension control
+  "6628.",	#Poor hypertension control
+  "662F.",	#Hypertension treatm. started
+  "662G."	#Hypertensive treatm.changed
+)
+
+# ICD 9 codes
+pmhx_htn_list_icd9 <- c(  
+  "V811",	#Hypertension
+  "401",	#Essential hypertension
+  "4010",	#Malignant
+  "4011",	#Benign
+  "4019",	#Unspecified
+  "402",	#Hypertensive heart disease
+  "4020",	#Malignant
+  "40200",	#Without heart failure
+  "40201",	#With heart failure
+  "4021",	#Benign
+  "40210",	#Without heart failure
+  "40211",	#With heart failure
+  "4029",	#Unspecified
+  "40290",	#Without heart failure
+  "40291",	#With heart failure
+  "403",	#Hypertensive chronic kidney disease
+  "4030",	#Malignant
+  "4031",	#Benign
+  "4039",	#Unspecified
+  "404",	#Hypertensive heart and chronic kidney disease
+  "4040",	#Malignant
+  "4041",	#Benign
+  "4049",	#Unspecified
+  "405",	#Secondary hypertension
+  "4050",	#Malignant
+  "40501",	#Renovascular
+  "40509",	#Other
+  "4051",	#Benign
+  "40511",	#Renovascular
+  "40519",	#Other
+  "4059",	#Unspecified
+  "40591",	#Renovascular
+  "40599"	#Other
+)
+
+# ICD10 codes
+pmhx_htn_list_icd10 <- c(  
+  "I10",     #Essential (primary) hypertension
+  "I11.0",    #Hypertensive heart disease with heart failure
+  "I11.9",    #Hypertensive heart disease without heart failure
+  "I12.0",    #Hypertensive chronic kidney disease with stage 5 chronic kidney disease or end stage renal disease
+  "I12.9",    #Hypertensive chronic kidney disease with stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease
+  "I13.0",    #Hypertensive heart and chronic kidney disease with heart failure and stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease
+  "I13.10",   #Hypertensive heart and chronic kidney disease without heart failure, with stage 1 through stage 4 chronic kidney disease, or unspecified chronic kidney disease
+  "I13.11",   #Hypertensive heart and chronic kidney disease without heart failure, with stage 5 chronic kidney disease, or end stage renal disease
+  "I13.2",    #Hypertensive heart and chronic kidney disease with heart failure and with stage 5 chronic kidney disease, or end stage renal disease
+  "I15.0",    #Renovascular hypertension
+  "I15.1",    #Hypertension secondary to other renal disorders
+  "I15.2",    #Hypertension secondary to endocrine disorders
+  "I15.8",    #Other secondary hypertension
+  "I15.9",    #Secondary hypertension, unspecified
+  "I16.0",    #Hypertensive urgency
+  "I16.1",    #Hypertensive emergency
+  "I16.9",    #Hypertensive crisis, unspecified
+  "I1A.0",    #Resistant hypertension
+  "R03.0"    #Elevated blood-pressure reading, without diagnosis of hypertension
+)
+
+###########################
+## 3. Define PKD codes ####
+
+pmhx_pkd_list_readv2_3 <- c(  
+  "PD1..",	#Kidney: [congenital cystic disease] or [fibrocystic] or [polycystic] or [sponge]
+  "PD110",	#Autosomal recessive polycystic kidney disease
+  "PD111",	#Autosomal dominant polycystic kidney disease
+  "PD11z",	#(Polycystic kidney disease NOS) or (cystic kidney disease NEC)
+  "PD122",	#See X785r
+  "PD12y",	#Medullary cystic disease OS
+  "PD12z",	#Medullary cystic disease NOS
+  "PD13.",	#Multicystic kidney
+  "PD1y.",	#Other specified congenital cystic kidney disease
+  "PD1y0",	#Fibrocystic renal: [disease] or [degeneration]
+  "PD1y1",	#See X785q
+  "PD1yz",	#Other congenital cystic kidney disease NOS
+  "PD1z.",	#Congenital cystic kidney disease NOS
+  "X785n",	#Adult type polycystic kidney disease type 1
+  "X785o",	#Adult type polycystic kidney disease type II
+  "X785p",	#Autosomal dominant polycystic kidney disease in childhood
+  "X785r",	#Nephronophthisis - medullary cystic disease
+  "XE1LM",	#Congenital cystic disease of kidney
+  "XE1LN",	#Polycystic kidney disease NOS
+  "XE1Nm",	#(Congenital) or (acquired) cystic kidney disease (& [cyst] or [polycystic] or [fibrocystic] kidney)
+  "XM19K",	#[EDTA] Polycystic kidneys, infantile (recessive) associated with renal failure
+  "XM19L",	#[EDTA] Polycystic kidneys, adult type (dominant) associated with renal failure
+  "XM19M"	#[EDTA] Medullary cystic disease, including nephronophthisis, associated with renal failure
+)
+
+pmhx_pkd_list_icd9 <- c(  
+  "7531",	#Cystic kidney disease
+  "75310",	#Cystic kidney disease, unspecified
+  "75311",	#Congenital single renal cyst
+  "75312",	#Polycystic kidney, unspecified type
+  "75313",	#Polycystic kidney, autosomal dominant
+  "75314",	#Polycystic kidney, autosomal recessive
+  "75315",	#Renal dysplasia
+  "75316",	#Medullary cystic kidney
+  "75317",	#Medullary sponge kidney
+  "75319",	#Other specified cystic kidney disease
+  "V1861"	#Polycystic kidney
+)
+
+pmhx_pkd_list_icd10 <- c(  
+  "Q61.19",   #Other polycystic kidney, infantile type
+  "Q61.2",    #Polycystic kidney, adult type
+  "Q61.3",    #Polycystic kidney, unspecified
+  "Q61.5",    #Medullary cystic kidney
+  "Q61.8",    #Other cystic kidney diseases
+  "Q61.9"    #Cystic kidney disease, unspecified
+)
+
+###########################
+## 4. Get GP data #########
+
+pmhx_gp_data <-
+  recurrence_gp_data 
+
+umod_cohort_gp <- pmhx_gp_data %>% mutate(
+  htn = case_when(
+    (read_v2_code  %in% pmhx_htn_list_readv2_3 | 
+       ctv3_read_v3_code %in% pmhx_htn_list_readv2_3) ~ 1,
+    TRUE ~ 0), 
+  pkd = case_when(
+    (read_v2_code  %in% pmhx_pkd_list_readv2_3 | 
+       ctv3_read_v3_code %in% pmhx_pkd_list_readv2_3) ~ 1,
+    TRUE ~ 0),   
+  .keep = "all"
+)  %>% subset(select = -c(date_clinical_code_was_entered,
+                          read_v2_code,
+                          ctv3_read_v3_code,
+                          value_recorded_1,
+                          value_recorded_2,
+                          value_recorded_3))
+
+
+###########################
+## 5. Get ICD data ########
+
+umod_cohort_icd <- icd_dates4_long_diagnoses %>% mutate(
+  htn = case_when(
+    (icd_code  %in% pmhx_htn_list_icd9 | 
+       icd_code %in% pmhx_htn_list_icd10) ~ 1,
+    TRUE ~ 0), 
+  pkd = case_when(
+    (icd_code  %in% pmhx_pkd_list_icd9 | 
+       icd_code %in% pmhx_pkd_list_icd10) ~ 1,
+    TRUE ~ 0), 
+  .keep = "all"
+) %>% subset(select = -c(icd_code,
+                         date_of_code,
+                         description))
+
+
+##################################
+## 6. Merge GP / ICD datasets ####
+
+umod_cohort <- rbind(umod_cohort_gp,
+                     umod_cohort_icd) %>% as_tibble()
+
+# Create function to ensure that a positive code overrides negative codes
+custom_max <- function(x) {
+  if (any(x == 1, na.rm = TRUE)) {
+    return(1)
+  } else if (any(x == 0, na.rm = TRUE)) {
+    return(0)
+  } else {
+    return(NA)
+  }
+}
+
+umod_cohort_cleaned <- umod_cohort %>%
+  group_by(participant_id) %>%
+  summarize(across(where(is.numeric), ~custom_max(.x))) %>%
+  ungroup()
+
+##################################
+## 7. Get bloods data ####
+
+demographics <-
+  read.csv("~/Desktop/Howles/Recurrent Kidney stones/R/Recurrence/biochem_participant.csv",
+           na.strings = c("", " ", ".","NA", "N/A", "NULL")) %>% as_tibble() %>% janitor::clean_names()
+
+additional_bloods <- read.csv("~/Desktop/Howles/Recurrent Kidney stones/R/Recurrence/additional_bloods_participant.csv",
+                              na.strings = c("", " ", ".","NA", "N/A", "NULL")) %>% as_tibble() %>% janitor::clean_names()
+
+umod_bloods <- demographics %>% mutate(
+  calcium = coalesce(calcium_instance_0, calcium_instance_1),
+  albumin = coalesce(albumin_instance_0, albumin_instance_1),
+  vitamin_d = coalesce(vitamin_d_instance_0, vitamin_d_instance_1),
+  phosphate = coalesce(phosphate_instance_0, phosphate_instance_1),
+  waist_circumference = coalesce(waist_circumference_instance_0, 
+                                 waist_circumference_instance_1,
+                                 waist_circumference_instance_2,
+                                 waist_circumference_instance_3),
+  creatinine = coalesce(creatinine_instance_0, creatinine_instance_1),
+  hdl = coalesce(hdl_cholesterol_instance_0, hdl_cholesterol_instance_1),
+  triglycerides = coalesce(triglycerides_instance_0, triglycerides_instance_1),
+  ldl = coalesce(ldl_direct_instance_0, ldl_direct_instance_1),
+  hba1c = coalesce(glycated_haemoglobin_hb_a1c_instance_0, glycated_haemoglobin_hb_a1c_instance_1),
+  cystatin_c = coalesce(cystatin_c_instance_0, cystatin_c_instance_1),
+  alp = coalesce(alkaline_phosphatase_instance_0, alkaline_phosphatase_instance_1),
+  urea = coalesce(urea_instance_0, urea_instance_1),
+  na_urine = coalesce(sodium_in_urine_instance_0, sodium_in_urine_instance_1),
+  k_urine = coalesce(potassium_in_urine_instance_0, potassium_in_urine_instance_1),
+  creatinine_urine = coalesce(creatinine_enzymatic_in_urine_instance_0, creatinine_enzymatic_in_urine_instance_1),
+  hip_circumference = coalesce(hip_circumference_instance_0,
+                               hip_circumference_instance_1,
+                               hip_circumference_instance_2,
+                               hip_circumference_instance_3),
+  bmi = coalesce(body_mass_index_bmi_instance_0,
+                 body_mass_index_bmi_instance_1,
+                 body_mass_index_bmi_instance_2,
+                 body_mass_index_bmi_instance_3),
+  urate = coalesce(urate_instance_0,
+                   urate_instance_1)
+  ,
+  .keep = "unused"
+) %>% mutate(
+  whr = hip_circumference/waist_circumference,
+  adjca = calcium + (0.02*(40-albumin))
+)
+
+umod_bloods$sex <- as.factor(umod_bloods$sex)
+umod_bloods$sex <- recode_factor(umod_bloods$sex,
+                                  "0" = "Female",
+                                  "1" = "Male")
+
+umod_extra_bloods <- additional_bloods %>% mutate(
+  alt = coalesce(alanine_aminotransferase_instance_0, alanine_aminotransferase_instance_1),
+  glucose = coalesce(glucose_instance_0, glucose_instance_1),
+  ast = coalesce(aspartate_aminotransferase_instance_0, aspartate_aminotransferase_instance_1),
+  bilirubin = coalesce(direct_bilirubin_instance_0, direct_bilirubin_instance_1),
+  .keep = "unused"
+)
+
+umod_bloods <- umod_bloods %>% left_join(umod_extra_bloods, by = c("participant_id" = "participant_id"))
+
+#################################
+## 8. Get manual BP readings ####
+
+diet_data_participant <- read.csv("~/Desktop/Howles/Recurrent Kidney stones/R/Dietary Analysis/diet_data_updated__participant.csv",
+                                  na.strings = c("", " ", ".","NA", "N/A", "NULL")) %>% as_tibble() %>% janitor::clean_names()
+
+manual_bp <-
+  diet_data_participant %>% subset(
+    select = -c(
+      age_at_recruitment,
+      date_n20_first_reported_calculus_of_kidney_and_ureter,
+      date_n22_first_reported_calculus_of_urinary_tract_in_diseases_classified_elsewhere,
+      date_n23_first_reported_unspecified_renal_colic,
+      diagnoses_icd10,
+      date_of_first_in_patient_diagnosis_icd10_array_0,
+      date_of_first_in_patient_diagnosis_icd10_array_1,
+      sex,
+      blood_pressure_device_id_instance_0,
+      never_eat_eggs_dairy_wheat_sugar_instance_0,
+      met_minutes_per_week_for_moderate_activity_instance_0,
+      met_minutes_per_week_for_vigorous_activity_instance_0,
+      summed_minutes_activity_instance_0,
+      blood_pressure_manual_sphygmomanometer_device_id_instance_0,
+      above_moderate_vigorous_recommendation_instance_0,
+      above_moderate_vigorous_walking_recommendation_instance_0,
+      townsend_deprivation_index_at_recruitment,
+      water_intake_instance_0,
+      major_dietary_changes_in_the_last_5_years_instance_0
+    )
+  ) %>% as_tibble()
+
+manual_bp$year_of_birth <- as.character(manual_bp$year_of_birth)
+manual_bp$month_of_birth <- as.character(manual_bp$month_of_birth)
+manual_bp$date_of_end_stage_renal_disease_report <-
+  as.Date(manual_bp$date_of_end_stage_renal_disease_report)
+
+manual_bp <- manual_bp %>% mutate(
+  dob = paste("1", month_of_birth, year_of_birth, sep = " - "),
+  diastolic_bp = if_else(
+    !is.na(
+      diastolic_blood_pressure_automated_reading_instance_0_array_0
+    ),
+    diastolic_blood_pressure_automated_reading_instance_0_array_0,
+    if_else(
+      !is.na(diastolic_blood_pressure_manual_reading_instance_0_array_0),
+      diastolic_blood_pressure_manual_reading_instance_0_array_0,
+      NA_real_
+    )
+  ),
+  systolic_bp = if_else(
+    !is.na(
+      systolic_blood_pressure_automated_reading_instance_0_array_0
+    ),
+    systolic_blood_pressure_automated_reading_instance_0_array_0,
+    if_else(
+      !is.na(systolic_blood_pressure_manual_reading_instance_0_array_0),
+      systolic_blood_pressure_manual_reading_instance_0_array_0,
+      NA_real_
+    )
+  ),
+  CKD = ifelse(!is.na(date_of_end_stage_renal_disease_report),
+               "yes",
+               "no"),
+  .keep = "all"
+) %>% subset(
+  select = c(
+    participant_id,
+    dob,
+    diastolic_bp,
+    systolic_bp,
+    CKD,
+    date_of_end_stage_renal_disease_report
+  )
+)
+
+manual_bp$dob <- as.Date(manual_bp$dob,
+                         format = "%d - %m - %Y")
+manual_bp$CKD <- factor(manual_bp$CKD,
+                        levels = c("yes",
+                                   "no"))
+
+manual_bp <-
+  manual_bp %>% left_join(overall_follow_up, by = c("participant_id" = "participant_id")) %>% mutate(CKD_date = as.Date(ifelse(
+    !is.na(date_of_end_stage_renal_disease_report),
+    date_of_end_stage_renal_disease_report,
+    last_date
+  ))) %>% mutate(time_to_CKD = difftime(CKD_date, dob, units = "days") / 365 #Time difference between birth + CKD or last follow-up date, divided by 365 to make into years
+                  ,
+                  .keep = "unused") %>% subset(select = -date_of_end_stage_renal_disease_report)  
+
+#########################################
+## 9. Merge all datasets and explore ####
+
+umod_cohort_complete <-
+  umod_cohort_cleaned %>% left_join(umod_bloods, by = c("participant_id" = "participant_id")) %>% left_join(manual_bp,
+                                                                                                            by = c("participant_id" = "participant_id"))
+str(umod_cohort_complete)
+
+table(umod_cohort_complete$htn)
+plot_missing(umod_cohort_complete)
+
+umod_cohort_complete <-
+  umod_cohort_complete %>% mutate(CKD_numeric = ifelse(CKD == "yes", 1, ifelse(CKD == "no", 0, NA)))
+
+umod_cohort_complete$CKD_numeric <- as.integer(umod_cohort_complete$CKD_numeric)
+umod_cohort_complete$time_to_CKD <- as.numeric(umod_cohort_complete$time_to_CKD)
+
+km_ckd <- surv_fit(Surv(time_to_CKD, CKD_numeric) ~ pkd, data=umod_cohort_complete) 
+ggsurvplot(km_ckd,
+           data = umod_cohort_complete,
+           risk.table = TRUE,
+           surv.median.line = "hv",
+           conf.int = TRUE,
+           censor = FALSE,
+           tables.theme = theme_cleantable(),
+           break.time.by = 5,
+           xlab = "Time (years)",
+           xlim = c(0,80),
+           title = "Time to First Recurrence")
+
+#########################################
+## 10. Calculate eGFR ####################
+
+gfr_function <-
+  function(creatinine,
+           cystatin_c,
+           age_at_recruitment,
+           A,
+           B,
+           C,
+           D,
+           sex) {
+    gfr <-
+      ifelse(sex == "Female",
+             0.963 * (135 * ((creatinine / A) ^ B) * ((cystatin_c / C) ^ D) * 0.9961 ^ age_at_recruitment),
+        (135 * ((creatinine / A) ^ B) * ((cystatin_c / C) ^ D) * 0.9961 ^ age_at_recruitment))
+    return(gfr)
+  }
+
+
+
+umod_cohort_complete <- umod_cohort_complete %>% mutate(
+  A = ifelse(sex == "Female", 0.7,
+             ifelse(sex == "Male", 0.9, NA)),
+  B = ifelse(
+    sex == "Female" & creatinine <= 0.7,-0.219,
+    ifelse(
+      sex == "Male" & creatinine <= 0.7,-0.144,
+      ifelse(creatinine > 0.7, -0.544, NA)
+    )
+  ),
+  C = 0.8,
+  D = ifelse(cystatin_c > 0.8, -0.778,
+             ifelse(cystatin_c <= 0.8, -0.323, NA)),
+  .keep = "all"
+) %>% mutate(gfr = gfr_function(
+  creatinine = creatinine,
+  cystatin_c = cystatin_c,
+  age_at_recruitment = age_at_recruitment,
+  A = A,
+  B = B,
+  C = C,
+  D = D,
+  sex = sex)
+  )
+
+#########################################
+## 11. Write pheno file #################
+
+write.table(
+  umod_cohort_complete,
+  "~/Desktop/umod_cohort.txt", 
+  sep ="\t",
+  row.names = FALSE,
+  quote = FALSE
+)
